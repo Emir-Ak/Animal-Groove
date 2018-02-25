@@ -1,36 +1,79 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.AI;
-
+﻿using UnityEngine;
+using System.Collections;
 public class AnimalController : MonoBehaviour {
 
-    Camera cam;
+    public float movSpeed = 5f;
+    public float rotSpeed = 5f;
 
     public LayerMask groundLayer;
 
-    public NavMeshAgent animalAgent;
+    float rndInt;
+
+    Quaternion oldRotation;
+    Vector3 newPosition;
+    Quaternion targetRotation;
+    Camera cam;
+    Ray mouseRay;
 
     private void Awake()
     {
         cam = Camera.main;
     }
+    private void Start()
+    {
+        newPosition = transform.position;
+        targetRotation = transform.rotation;
+        oldRotation = transform.rotation;
+    }
 
     void Update () {
-		if (Input.GetMouseButton(1))
+        
+
+		if (Input.GetMouseButtonDown(1))
         {
-            animalAgent.SetDestination(GroundPointFromMouse());
+            RaycastHit hit;
+            mouseRay = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(mouseRay, out hit, groundLayer))
+            {
+                newPosition = hit.point;
+            }
+
+            rndInt = Random.Range(10, 20);
         }
-	}
+        if (transform.position != newPosition){
+            Plane playerPlane = new Plane(Vector3.up, transform.position);
 
-    Vector3 GroundPointFromMouse()
-    {
-        Vector3 mouseScreenPosition = Input.mousePosition;
-        Vector3 mouseWorldPosition = cam.ScreenToWorldPoint(mouseScreenPosition);
+            float hitdist = 0.0f;
+            if (playerPlane.Raycast(mouseRay, out hitdist))
+            {
+                Vector3 targetPoint = mouseRay.GetPoint(hitdist);
 
-        RaycastHit hit;
+                targetRotation = Quaternion.LookRotation(targetPoint - transform.position);
 
-        Physics.Raycast(mouseWorldPosition, cam.transform.forward, out hit, 100, groundLayer);
-        return hit.point;
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotSpeed * Time.deltaTime);
+            }
+        }
+
+        if (oldRotation == transform.rotation)
+        {
+
+            if (transform.position != newPosition)
+            {
+                
+
+                float distanceBetween = Vector3.Distance(transform.position, newPosition);
+                if (distanceBetween > rndInt)
+                {
+                    float distanceTime = movSpeed;
+                    float relativeTime = distanceTime / distanceBetween;
+                    transform.position = Vector3.Lerp(transform.position, newPosition, relativeTime * Time.deltaTime);
+                }
+            }
+        }
+
+        else
+        {
+            oldRotation = transform.rotation;
+        }
     }
 }
